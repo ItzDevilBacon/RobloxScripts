@@ -156,7 +156,6 @@ local function attemptRoll(uuid)
 end
 
 RollService.OnClientEvent:Connect(function(...)
-
     local args = {...}
     logArguments(args)
 
