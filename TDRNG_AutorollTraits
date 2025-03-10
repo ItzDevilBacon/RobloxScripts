@@ -1,7 +1,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
-local TweenService = game:GetService("TweenService")
 
 local player = Players.LocalPlayer
 local RollService = ReplicatedStorage:WaitForChild("_NetworkServiceContainer"):WaitForChild("RollService")
@@ -10,81 +9,96 @@ local activeUUID = nil
 local rolling = false
 local screenGui
 
--- 🔹 Function to Create a Modern Draggable UI
-local function createUI()
+-- Function to create a draggable UI button with modern style
+local function createDraggableButton(buttonText, initialPosition, buttonColor)
     if screenGui then screenGui:Destroy() end  -- Remove old GUI if it exists
 
     screenGui = Instance.new("ScreenGui")
+    local rollButton = Instance.new("TextButton")
+    local destroyButton = Instance.new("TextButton")
+    local resetButton = Instance.new("TextButton")
+    local UICorner = Instance.new("UICorner")
+    local UIStroke = Instance.new("UIStroke")
+    
+    -- Parent to CoreGui for visibility
     screenGui.Name = "RollingControlGUI"
     screenGui.Parent = game:GetService("CoreGui")
     screenGui.ResetOnSpawn = false
 
-    -- 🔲 Main UI Frame (Outside Box)
-    local mainFrame = Instance.new("Frame")
-    mainFrame.Parent = screenGui
-    mainFrame.Size = UDim2.new(0.2, 0, 0.15, 0)
-    mainFrame.Position = UDim2.new(0.4, 0, 0.3, 0)
-    mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    mainFrame.BackgroundTransparency = 0.2
-    mainFrame.BorderSizePixel = 0
-
-    -- ✨ UI Effects
-    local UICorner = Instance.new("UICorner", mainFrame)
-    UICorner.CornerRadius = UDim.new(0.1, 0)
-
-    local UIStroke = Instance.new("UIStroke", mainFrame)
-    UIStroke.Thickness = 3
-    UIStroke.Color = Color3.fromRGB(200, 200, 200)
-
-    -- 🟢 Rolling Button
-    local rollButton = Instance.new("TextButton")
-    rollButton.Parent = mainFrame
-    rollButton.Size = UDim2.new(0.8, 0, 0.3, 0)
-    rollButton.Position = UDim2.new(0.1, 0, 0.2, 0)
-    rollButton.Text = "Start Rolling"
-    rollButton.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+    -- Main rolling button (modern style)
+    rollButton.Parent = screenGui
+    rollButton.BackgroundColor3 = buttonColor or Color3.fromRGB(0, 170, 255)
+    rollButton.BackgroundTransparency = 0.15
+    rollButton.Position = initialPosition
+    rollButton.Size = UDim2.new(0.2, 0, 0.06, 0)
+    rollButton.Text = buttonText
     rollButton.TextColor3 = Color3.fromRGB(255, 255, 255)
     rollButton.TextScaled = true
-    rollButton.Font = Enum.Font.SourceSansBold
-    rollButton.AutoButtonColor = false
+    rollButton.Font = Enum.Font.GothamBold
+    rollButton.TextSize = 22
 
-    local rollUICorner = Instance.new("UICorner", rollButton)
-    rollUICorner.CornerRadius = UDim.new(0.5, 0)
+    -- Reset button (modern style)
+    resetButton.Parent = screenGui
+    resetButton.BackgroundColor3 = Color3.fromRGB(255, 150, 50)
+    resetButton.BackgroundTransparency = 0.2
+    resetButton.Position = initialPosition + UDim2.new(0, 0, 0.08, 0)
+    resetButton.Size = UDim2.new(0.2, 0, 0.06, 0)
+    resetButton.Text = "Reset Roll"
+    resetButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    resetButton.TextScaled = true
+    resetButton.Font = Enum.Font.GothamBold
+    resetButton.TextSize = 22
 
-    -- ❌ Destroy Button
-    local destroyButton = Instance.new("TextButton")
-    destroyButton.Parent = mainFrame
-    destroyButton.Size = UDim2.new(0.8, 0, 0.3, 0)
-    destroyButton.Position = UDim2.new(0.1, 0, 0.6, 0)
-    destroyButton.Text = "Destroy GUI"
+    -- Destroy button (modern style)
+    destroyButton.Parent = screenGui
     destroyButton.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+    destroyButton.BackgroundTransparency = 0.2
+    destroyButton.Position = initialPosition + UDim2.new(0, 0, 0.16, 0)
+    destroyButton.Size = UDim2.new(0.2, 0, 0.06, 0)
+    destroyButton.Text = "Destroy GUI"
     destroyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
     destroyButton.TextScaled = true
-    destroyButton.Font = Enum.Font.SourceSansBold
-    destroyButton.AutoButtonColor = false
+    destroyButton.Font = Enum.Font.GothamBold
+    destroyButton.TextSize = 22
 
-    local destroyUICorner = Instance.new("UICorner", destroyButton)
-    destroyUICorner.CornerRadius = UDim.new(0.5, 0)
+    -- Add rounded corners and strokes for smoothness
+    UICorner.CornerRadius = UDim.new(0.3, 0)
+    UICorner.Parent = rollButton
+    local UICorner2 = UICorner:Clone()
+    UICorner2.Parent = resetButton
+    local UICorner3 = UICorner:Clone()
+    UICorner3.Parent = destroyButton
 
-    -- 🏗 Smooth Dragging System
+    UIStroke.Parent = rollButton
+    UIStroke.Thickness = 2
+    UIStroke.Color = Color3.fromRGB(0, 0, 0)
+    local UIStroke2 = UIStroke:Clone()
+    UIStroke2.Parent = resetButton
+    local UIStroke3 = UIStroke:Clone()
+    UIStroke3.Parent = destroyButton
+
+    -- Dragging functionality
     local dragging, dragStart, startPos
 
-    mainFrame.InputBegan:Connect(function(input)
+    rollButton.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             dragging = true
             dragStart = input.Position
-            startPos = mainFrame.Position
+            startPos = rollButton.Position
         end
     end)
 
     UserInputService.InputChanged:Connect(function(input)
         if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
             local delta = input.Position - dragStart
-            TweenService:Create(
-                mainFrame,
-                TweenInfo.new(0.1, Enum.EasingStyle.Sine, Enum.EasingDirection.Out),
-                {Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)}
-            ):Play()
+            rollButton.Position = UDim2.new(
+                startPos.X.Scale,
+                startPos.X.Offset + delta.X,
+                startPos.Y.Scale,
+                startPos.Y.Offset + delta.Y
+            )
+            resetButton.Position = rollButton.Position + UDim2.new(0, 0, 0.08, 0)
+            destroyButton.Position = resetButton.Position + UDim2.new(0, 0, 0.08, 0)
         end
     end)
 
@@ -94,23 +108,27 @@ local function createUI()
         end
     end)
 
-    -- 🎯 Toggle Rolling
+    -- Toggle rolling on roll button click
     rollButton.MouseButton1Click:Connect(function()
         rolling = not rolling
         rollButton.Text = rolling and "Stop Rolling" or "Start Rolling"
         print(rolling and "Rolling started." or "Rolling stopped.")
 
+        -- Attempt roll immediately if rolling is true and UUID is set
         if rolling and activeUUID then
-            task.spawn(attemptRoll, activeUUID) -- Start rolling instantly
-        else
-            task.wait(1) -- Auto-reset after stopping
-            rolling = false
-            activeUUID = nil
-            print("Rolling auto-reset complete.")
+            task.spawn(attemptRoll, activeUUID)
         end
     end)
 
-    -- 🚫 Destroy GUI
+    -- Reset button to stop rolling and clear UUID
+    resetButton.MouseButton1Click:Connect(function()
+        rolling = false
+        activeUUID = nil
+        rollButton.Text = "Start Rolling"
+        print("Auto-roll reset. UUID cleared.")
+    end)
+
+    -- Destroy GUI button
     destroyButton.MouseButton1Click:Connect(function()
         rolling = false
         if screenGui then
@@ -119,9 +137,17 @@ local function createUI()
         end
         print("GUI Destroyed. Rolling stopped.")
     end)
+
+    return rollButton
 end
 
--- 📌 Function to Attempt Rolling
+local function logArguments(args)
+    print("RollService event received. Arguments:")
+    for index, value in ipairs(args) do
+        print(index, ":", value)
+    end
+end
+
 local function attemptRoll(uuid)
     if rolling and uuid then
         RollService:FireServer("attemptTraitRoll", uuid)
@@ -129,21 +155,21 @@ local function attemptRoll(uuid)
     end
 end
 
--- 🎯 Event Listener for Roll Results
 RollService.OnClientEvent:Connect(function(...)
+
     local args = {...}
-    print("RollService event received.")
+    logArguments(args)
 
     -- Capture UUID if not already set
     if not activeUUID and args[2] and type(args[2]) == "string" then
         activeUUID = args[2]
         print("Captured UUID:", activeUUID)
         if rolling then
-            task.spawn(attemptRoll, activeUUID) -- Roll instantly if rolling is active
+            task.spawn(attemptRoll, activeUUID) -- Start rolling instantly
         end
     end
 
-    -- Detect Successful Trait Roll
+    -- Detect if a new trait was rolled (modify event name as needed)
     if args[1] == "traitRollSuccess" then
         print("Trait successfully rolled! Stopping auto-roll.")
         rolling = false
@@ -152,9 +178,9 @@ RollService.OnClientEvent:Connect(function(...)
             if rollButton then rollButton.Text = "Start Rolling" end
         end
     elseif rolling then
-        task.spawn(attemptRoll, activeUUID) -- Keep rolling if no success
+        task.spawn(attemptRoll, activeUUID) -- Keep rolling instantly if no success
     end
 end)
 
--- ✅ Initialize UI
-createUI()
+-- Create UI Buttons with modern design
+createDraggableButton("Start Rolling", UDim2.new(0.5, -90, 0.5, -40), Color3.fromRGB(0, 170, 255))
