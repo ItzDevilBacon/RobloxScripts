@@ -9,6 +9,17 @@ local activeUUID = nil
 local rolling = false
 local screenGui
 
+-- Function to reset rolling state
+local function resetRoll()
+    rolling = false
+    activeUUID = nil
+    if screenGui then
+        local rollButton = screenGui:FindFirstChildOfClass("TextButton")
+        if rollButton then rollButton.Text = "Start Rolling" end
+    end
+    print("Auto-roll has been reset.")
+end
+
 -- Function to create a draggable UI button with modern style
 local function createDraggableButton(buttonText, initialPosition, buttonColor)
     if screenGui then screenGui:Destroy() end  -- Remove old GUI if it exists
@@ -25,7 +36,7 @@ local function createDraggableButton(buttonText, initialPosition, buttonColor)
     screenGui.Parent = game:GetService("CoreGui")
     screenGui.ResetOnSpawn = false
 
-    -- Main rolling button (modern style)
+    -- Main rolling button
     rollButton.Parent = screenGui
     rollButton.BackgroundColor3 = buttonColor or Color3.fromRGB(0, 170, 255)
     rollButton.BackgroundTransparency = 0.15
@@ -37,7 +48,7 @@ local function createDraggableButton(buttonText, initialPosition, buttonColor)
     rollButton.Font = Enum.Font.GothamBold
     rollButton.TextSize = 22
 
-    -- Reset button (modern style)
+    -- Reset button
     resetButton.Parent = screenGui
     resetButton.BackgroundColor3 = Color3.fromRGB(255, 150, 50)
     resetButton.BackgroundTransparency = 0.2
@@ -49,7 +60,7 @@ local function createDraggableButton(buttonText, initialPosition, buttonColor)
     resetButton.Font = Enum.Font.GothamBold
     resetButton.TextSize = 22
 
-    -- Destroy button (modern style)
+    -- Destroy button
     destroyButton.Parent = screenGui
     destroyButton.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
     destroyButton.BackgroundTransparency = 0.2
@@ -61,7 +72,7 @@ local function createDraggableButton(buttonText, initialPosition, buttonColor)
     destroyButton.Font = Enum.Font.GothamBold
     destroyButton.TextSize = 22
 
-    -- Add rounded corners and strokes for smoothness
+    -- Add rounded corners and stroke
     UICorner.CornerRadius = UDim.new(0.3, 0)
     UICorner.Parent = rollButton
     local UICorner2 = UICorner:Clone()
@@ -110,22 +121,26 @@ local function createDraggableButton(buttonText, initialPosition, buttonColor)
 
     -- Toggle rolling on roll button click
     rollButton.MouseButton1Click:Connect(function()
-        rolling = not rolling
-        rollButton.Text = rolling and "Stop Rolling" or "Start Rolling"
-        print(rolling and "Rolling started." or "Rolling stopped.")
+        if rolling then
+            rolling = false
+            rollButton.Text = "Start Rolling"
+            print("Rolling stopped.")
+        else
+            resetRoll()  -- Auto-reset when rolling starts
+            rolling = true
+            rollButton.Text = "Stop Rolling"
+            print("Rolling started.")
 
-        -- Attempt roll immediately if rolling is true and UUID is set
-        if rolling and activeUUID then
-            task.spawn(attemptRoll, activeUUID)
+            -- Attempt roll immediately if UUID is set
+            if activeUUID then
+                task.spawn(attemptRoll, activeUUID)
+            end
         end
     end)
 
-    -- Reset button to stop rolling and clear UUID
+    -- Manual reset button
     resetButton.MouseButton1Click:Connect(function()
-        rolling = false
-        activeUUID = nil
-        rollButton.Text = "Start Rolling"
-        print("Auto-roll reset. UUID cleared.")
+        resetRoll()
     end)
 
     -- Destroy GUI button
@@ -172,10 +187,7 @@ RollService.OnClientEvent:Connect(function(...)
     if args[1] == "traitRollSuccess" then
         print("Trait successfully rolled! Stopping auto-roll.")
         rolling = false
-        if screenGui then
-            local rollButton = screenGui:FindFirstChildOfClass("TextButton")
-            if rollButton then rollButton.Text = "Start Rolling" end
-        end
+        resetRoll()
     elseif rolling then
         task.spawn(attemptRoll, activeUUID) -- Keep rolling instantly if no success
     end
